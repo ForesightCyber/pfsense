@@ -15,6 +15,14 @@ def setDebug():
     logging.basicConfig(level=logging.DEBUG)
 
 
+def setVerbose():
+    logging.basicConfig(level=logging.INFO)
+
+
+def setWarning():
+    logging.basicConfig(level=logging.WARNING)
+
+
 def helpMsg(p):
     print(p.format_help())
     print(p.format_values())
@@ -48,11 +56,14 @@ class Anonymize():
 
     def process(self):
         for s in self._sections:
+            logging.getLogger().warning("Working on section %s (type=%s)" % (s, self._tpe))
             for x in self._xml.findall(s):
                 if self._tpe == None:
+                    logging.getLogger().info("Hiding section %s (type=%s)" % (s, self._tpe))
                     x.text = ""
                 else:
                     if x.text in self.pairs.keys():
+                        logging.getLogger().info("Changing section %s (type=%s) from '%s' to '%s'" % (s, self._tpe, x.text, self.pairs[x.text]))
                         x.text = self.pairs[x.text]
                     else:
                         if self._tpe == "paragraph":
@@ -85,17 +96,20 @@ class Anonymize():
                                 self.pairs[x.text] = self._faker.hostname(levels=0)
                         else:
                             raise Exception("Bad type %s" % self._tpe)
+                        logging.getLogger().info("Changing section %s (type=%s) from '%s' to '%s'" % (
+                            s, self._tpe, x.text, self.pairs[x.text]))
                         x.text = self.pairs[x.text]
 
     def tostring(self):
         return ET.tostring(self._xml, encoding='unicode', method='xml')
 
 
-p = argparse.ArgumentParser()
-p.add_argument('-d', dest='d', action='store_const', const='d', metavar='Bool', default=None)
-p.add_argument('--xml-in', dest='xmlin', metavar='XML input', required=False, default=None)
-p.add_argument('--xml-out', dest='xmlout', metavar='XML output', required=False, default=None)
-p.add_argument('--hide-nodes', dest='hsections', metavar='Which sections to hide (Xpath)',
+p = argparse.ArgumentParser(add_help=True, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+p.add_argument('-d', dest='d', action='store_const', const='d', help='Debug messages', metavar='Bool', default=None)
+p.add_argument('-v', dest='v', action='store_const', const='v', help='Verbose messages', metavar='Bool', default=None)
+p.add_argument('--xml-in', dest='xmlin', help='XML input', required=False, default=None)
+p.add_argument('--xml-out', dest='xmlout', help='XML output', required=False, default=None)
+p.add_argument('--hide-nodes', dest='hsections', help='Which sections to hide (Xpath)',
                default=[
                    ".//bcrypt-hash",
                    ".//authorizedkeys",
@@ -146,17 +160,17 @@ p.add_argument('--hide-nodes', dest='hsections', metavar='Which sections to hide
                    ".//item/useproxypass",
                    ".//item/publickey", ".//item/privatekey",
                    ".//password"
-               ], action="append"
+               ]
                )
 
-p.add_argument('--anonymize-ip-nodes', dest='isections', metavar='Which sections to anonymize by IP (Xpath)',
+p.add_argument('--anonymize-ip-nodes', dest='isections', help='Which sections to anonymize by IP (Xpath)',
                default=[
                    ".//ipaddr", ".//route/network", ".//failover_peerip", ".//gateway", ".//range/from", ".//range/to", ".//remoteid/address",
                    ".//allowedips/row/address", ".//endpoint"
-               ], action="append"
+               ]
                )
 
-p.add_argument('--anonymize-name-nodes', dest='nsections', metavar='Which sections to anonymize by Name (Xpath)',
+p.add_argument('--anonymize-name-nodes', dest='nsections', help='Which sections to anonymize by Name (Xpath)',
                default=[
                    ".//username", ".//name", ".//hostname", ".//openvpn-csc/common_name",
                    ".//pfblockernglistsv4/config/*/url", ".//alias/address"
@@ -164,20 +178,33 @@ p.add_argument('--anonymize-name-nodes', dest='nsections', metavar='Which sectio
                ], action="append"
                )
 
-p.add_argument('--anonymize-descr-nodes', dest='dsections', metavar='Which sections to anonymize by Descripton (Xpath)',
+p.add_argument('--anonymize-descr-nodes', dest='dsections', help='Which sections to anonymize by Descripton (Xpath)',
                default=[
                    ".//descr", ".//description", ".//separator/text", ".//aliases/*/detail"
-               ], action="append"
+               ]
                )
 
-
-p.add_argument('--remove-nodes', dest='rsections', metavar='Which sections to completely remove (Xpath)',
-               default=[], action="append"
+p.add_argument('--remove-nodes', dest='rsections', help='Which sections to completely remove (Xpath)',
+               default=[]
                )
 cfg = p.parse_args()
+if type(cfg.hsections) is str:
+    cfg.hsections = cfg.hsections.split(",")
+if type(cfg.isections) is str:
+    cfg.isections = cfg.isections.split(",")
+if type(cfg.nsections) is str:
+    cfg.nsections = cfg.nsections.split(",")
+if type(cfg.dsections) is str:
+    cfg.dsections = cfg.dsections.split(",")
+if type(cfg.rsections) is str:
+    cfg.rsections = cfg.rsections.split(",")
 
 if cfg.d:
     setDebug()
+elif cfg.v:
+    setVerbose()
+else:
+    setWarning()
 
 if cfg.xmlin:
     inf = open(cfg.xmlin, "r")
