@@ -175,7 +175,7 @@ p.add_argument('--anonymize-name-nodes', dest='nsections', help='Which sections 
                    ".//username", ".//name", ".//hostname", ".//openvpn-csc/common_name",
                    ".//pfblockernglistsv4/config/*/url", ".//alias/address"
                                                          ".//rule/*/username",
-               ], action="append"
+               ]
                )
 
 p.add_argument('--anonymize-descr-nodes', dest='dsections', help='Which sections to anonymize by Descripton (Xpath)',
